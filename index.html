@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>短剧创作工作台 - 爆款拆书完全体 Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* ======= 全局 CSS 变量 ======= */
+        :root {
+            --bg-body: #f4f4f5; --bg-card: #ffffff; --text-main: #000000; --text-muted: #71717a;
+            --border-light: #e4e4e7; --btn-primary-bg: #000000; --btn-primary-text: #ffffff;
+            --btn-primary-hover: #27272a; --danger: #ef4444; --overlay-bg: rgba(0,0,0,0.4);
+            --shadow-sm: 0 4px 20px rgba(0,0,0,0.03); --shadow-md: 0 8px 24px rgba(0,0,0,0.04);
+            --ai-accent: #8b5cf6;
+        }
+        body.dark-mode {
+            --bg-body: #09090b; --bg-card: #18181b; --text-main: #f4f4f5; --text-muted: #a1a1aa;
+            --border-light: #27272a; --btn-primary-bg: #f4f4f5; --btn-primary-text: #000000;
+            --btn-primary-hover: #e4e4e7; --danger: #f87171; --overlay-bg: rgba(0,0,0,0.7);
+            --shadow-sm: 0 4px 20px rgba(0,0,0,0.4); --shadow-md: 0 8px 24px rgba(0,0,0,0.6);
+            --ai-accent: #a78bfa;
+        }
+        body.eye-mode {
+            --bg-body: #edf7ed; --bg-card: #fbfff8; --text-main: #1f3b2b; --text-muted: #58705f;
+            --border-light: #cfe3cf; --btn-primary-bg: #2f5d3f; --btn-primary-text: #ffffff;
+            --btn-primary-hover: #244a32; --danger: #dc2626; --overlay-bg: rgba(31,59,43,0.35);
+            --shadow-sm: 0 4px 20px rgba(47,93,63,0.05); --shadow-md: 0 8px 24px rgba(47,93,63,0.08);
+            --ai-accent: #2f855a;
+        }
+
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; -webkit-font-smoothing: antialiased; transition: background-color 0.3s, color 0.3s; overflow-x: hidden; }
+
+        /* ======= 侧边栏 ======= */
+        .sidebar { width: 260px; background-color: var(--bg-card); border-right: 1px solid var(--border-light); display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 100; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .sidebar.collapsed { transform: translateX(-100%); }
+        .logo-area { padding: 32px 24px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 12px; letter-spacing: -0.5px; }
+        .logo-icon { background: var(--text-main); color: var(--bg-card); width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+        .nav-menu { padding: 0 16px; display: flex; flex-direction: column; gap: 4px; flex: 1; margin-top: 10px;}
+        .nav-item { padding: 12px 16px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-size: 14px; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 12px;}
+        .nav-item:hover { background-color: var(--bg-body); color: var(--text-main); }
+        .nav-item.active { background-color: var(--text-main); color: var(--bg-card); font-weight: 600; }
+
+        /* ======= 底部控制 ======= */
+        .bottom-controls { padding: 24px; border-top: 1px solid var(--border-light); background-color: var(--bg-card); transition: all 0.3s;}
+        .control-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .control-title { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;}
+        .theme-toggle { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; transition: color 0.2s;}
+        .theme-toggle:hover { color: var(--text-main); }
+        .noise-btn-group { display: flex; gap: 8px; margin-bottom: 16px; }
+        .noise-btn { width: 44px; height: 44px; border-radius: 6px; border: 1px solid var(--border-light); background: var(--bg-card); cursor: pointer; transition: all 0.2s; font-size: 18px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+        .noise-btn:hover { border-color: var(--text-main); color: var(--text-main); }
+        .noise-btn.active { background: var(--text-main); border-color: var(--text-main); color: var(--bg-card); }
+        .volume-container { display: flex; align-items: center; gap: 10px; }
+        .volume-icon { font-size: 12px; color: var(--text-muted); }
+        .volume-slider { flex: 1; height: 4px; -webkit-appearance: none; background: var(--border-light); border-radius: 2px; outline: none; }
+        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--text-main); cursor: pointer; }
+
+        /* ======= 主内容区 ======= */
+        .main-content { flex: 1; margin-left: 260px; padding: 40px; width: calc(100% - 260px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding-bottom: 120px; }
+        .main-content.expanded { margin-left: 0; width: 100%; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .page-header { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end;}
+        .page-title h2 { font-size: 28px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px; }
+        .page-title p { color: var(--text-muted); font-size: 14px; margin-left: 48px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; padding: 24px; transition: all 0.3s; }
+        
+        .btn { padding: 8px 16px; border: 1px solid transparent; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; font-family: inherit; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;}
+        .btn-primary { background-color: var(--btn-primary-bg); color: var(--btn-primary-text); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-primary:hover { background-color: var(--btn-primary-hover); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.15);}
+        .btn-outline { background-color: transparent; border: 1px solid var(--border-light); color: var(--text-main); }
+        .btn-outline:hover { border-color: var(--text-main); }
+        .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+        .btn-danger:hover { background: var(--danger); color: #fff; }
+        .sidebar-toggle-btn { background: transparent; border: 1px solid var(--border-light); padding: 6px 10px; border-radius: 6px; cursor: pointer; color: var(--text-main); transition: 0.2s; }
+        .sidebar-toggle-btn:hover { background: var(--border-light); }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 13px; }
+        .form-control { width: 100%; padding: 12px 16px; background-color: var(--bg-body); border: 1px solid var(--border-light); border-radius: 6px; color: var(--text-main); font-size: 14px; font-family: inherit; transition: border-color 0.2s; }
+        .form-control:focus { outline: none; border-color: var(--text-main); background-color: var(--bg-card);}
+
+        /* ======= 模块 0: AI 拆书 ======= */
+        .ai-upload-area { border: 2px dashed var(--border-light); border-radius: 12px; padding: 48px; text-align: center; transition: all 0.3s; cursor: pointer; background: var(--bg-body); margin-bottom: 24px;}
+        .ai-upload-area:hover { border-color: var(--text-main); background: var(--bg-card); }
+        .ai-upload-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.7;}
+        .ai-result-box { display: none; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px; overflow: hidden; margin-top: 24px; animation: fadeIn 0.5s ease; box-shadow: var(--shadow-sm);}
+        .ai-result-header { background: var(--text-main); color: var(--bg-card); padding: 16px 24px; font-weight: 600; display: flex; justify-content: space-between; align-items: center;}
+        .ai-result-content { padding: 32px; font-size: 15px; line-height: 1.8; color: var(--text-main); max-height: 600px; overflow-y: auto; white-space: pre-wrap;}
+        .ai-result-content .section-title { font-size: 18px; font-weight: 700; margin-top: 28px; margin-bottom: 12px; border-bottom: 1px solid var(--border-light); padding-bottom: 8px; color: var(--text-main); }
+        .ai-result-content .section-title:first-child { margin-top: 0; }
+        
+        .loader { border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-right: 12px;}
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .api-status { font-size: 12px; margin-top: 8px; display: none; padding: 8px; border-radius: 4px; }
+        .api-status.success { background: #dcfce7; color: #166534; display: block; }
+        .api-status.error { background: #fee2e2; color: #b91c1c; display: block; }
+
+        /* ======= 模块 1: 剧本库 ======= */
+        .project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
+        .project-card { display: flex; flex-direction: column; justify-content: space-between;}
+        .project-card:hover { border-color: var(--text-main); transform: translateY(-2px); box-shadow: var(--shadow-md);}
+        .project-card.active-proj { border: 2px solid var(--text-main); }
+        .proj-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .proj-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; display: flex; flex-direction: column; gap: 4px;}
+        .proj-actions { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-light); padding-top: 16px; margin-top: auto;}
+
+        /* ======= 模块 2: 沉浸编辑器 ======= */
+        .editor-wrapper { display: flex; gap: 20px; align-items: flex-start; width: 100%; transition: all 0.3s;}
+        .chapter-tree { width: 180px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; padding: 16px; max-height: 75vh; overflow-y: auto; flex-shrink: 0; }
+        .tree-header { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;}
+        .chapter-item { display: flex; justify-content: space-between; padding: 8px; border-radius: 4px; font-size: 13px; cursor: pointer; transition: background 0.2s;}
+        .chapter-item:hover { background: var(--bg-body); }
+        .chapter-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px;}
+        .chapter-words { color: var(--text-muted); font-size: 11px;}
+        
+        .editor-main { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 400px; transition: all 0.3s; position: relative;}
+        .editor-header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; background: var(--bg-card); border: 1px solid var(--border-light); padding: 12px 20px; border-radius: 8px; gap: 12px; }
+        .current-proj-name { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .editor-btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        #editor { width: 100%; min-height: 70vh; padding: 24px 40px; border: none; background: transparent; font-size: 17px; line-height: 1.8; color: var(--text-main); resize: vertical; outline: none; font-family: 'Noto Sans SC', sans-serif; border-radius: 8px;}
+        #editor::placeholder { color: var(--text-muted); font-weight: 300; }
+        
+        /* 鼠标快捷操作栏 */
+        .quick-tools { display: flex; gap: 8px; align-items: center; padding: 12px 24px; border-bottom: 1px dashed var(--border-light); background: var(--bg-card); border-top-left-radius: 8px; border-top-right-radius: 8px; }
+        
+        /* OOC悬浮按钮 */
+        #oocBtn { position: absolute; display: none; background: var(--ai-accent); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow-md); z-index: 50; transition: transform 0.1s;}
+        #oocBtn:hover { transform: scale(1.05); }
+
+        .right-panel { width: 280px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; display: flex; flex-direction: column; max-height: 75vh; overflow: hidden; flex-shrink: 0; }
+        .panel-tabs { display: flex; border-bottom: 1px solid var(--border-light); }
+        .panel-tab { flex: 1; text-align: center; padding: 10px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent;}
+        .panel-tab.active { color: var(--text-main); border-bottom-color: var(--text-main); }
+        .panel-content { padding: 16px; overflow-y: auto; flex: 1;}
+        .stat-mini { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 12px;}
+        .stat-mini-label { font-size: 12px; color: var(--text-muted); }
+        .stat-mini-value { font-size: 18px; font-weight: 700; font-family: 'Inter', sans-serif;}
+
+        /* 角色卡样式 */
+        .char-card { border: 1px solid var(--border-light); border-radius: 6px; padding: 12px; margin-bottom: 12px; background: var(--bg-body); position: relative;}
+        .char-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px dashed var(--border-light); padding-bottom: 8px;}
+        .char-name { font-weight: 700; font-size: 14px; }
+        .char-del { color: var(--danger); cursor: pointer; font-size: 12px; }
+        .char-field { margin-bottom: 6px; }
+        .char-label { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; display: block; }
+        .char-value { font-size: 12px; color: var(--text-main); line-height: 1.4;}
+
+        @media (max-width: 1200px) { .chapter-tree { display: none; } }
+        @media (max-width: 900px) { .right-panel { display: none; } .editor-main { min-width: 100%; } }
+
+        /* ======= 禅定模式 ======= */
+        body.zen-mode .sidebar { transform: translateX(-100%); }
+        body.zen-mode .main-content { margin-left: 0; width: 100vw; height: 100vh; padding: 0; max-width: none; overflow: hidden; }
+        body.zen-mode .page-header, body.zen-mode .chapter-tree, body.zen-mode .right-panel, body.zen-mode .ios-fab, body.zen-mode .ios-panel { display: none !important; }
+        body.zen-mode .editor-wrapper { display: flex; height: 100vh; padding: 0; margin: 0; background: var(--bg-card);}
+        body.zen-mode .editor-main { width: 100%; max-width: 900px; margin: 0 auto; height: 100vh; padding: 20px; border: none; }
+        body.zen-mode .editor-header-bar { border: none; border-bottom: 1px solid var(--border-light); border-radius: 0; background: transparent; padding: 12px 0;}
+        body.zen-mode .quick-tools { display: none; } /* 禅定模式隐藏鼠标快捷键 */
+        body.zen-mode #editor { height: calc(100vh - 80px); padding: 40px 20px; font-size: 18px; border: none; box-shadow: none; border-radius: 0; background: transparent;}
+
+        /* ======= 模块: 计划/扭蛋/灵感 ======= */
+        .plan-layout, .generator-layout { display: grid; grid-template-columns: 350px 1fr; gap: 24px; }
+        @media (max-width: 900px) { .plan-layout, .generator-layout { grid-template-columns: 1fr; } }
+        .plan-item { border-left: 3px solid var(--text-main); padding: 16px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-light); margin-bottom: 16px; transition: opacity 0.2s;}
+        .plan-item.completed { border-left-color: var(--border-light); opacity: 0.5; }
+        .gen-result-card { padding: 32px; min-height: 400px; display: flex; flex-direction: column; gap: 24px; border: 1px dashed var(--border-light);}
+        .inspiration-toolbar { display: flex; justify-content: space-between; margin-bottom: 24px; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 16px; flex-wrap: wrap; gap: 12px;}
+        .filter-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filter-tag { padding: 6px 14px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.2s; border: 1px solid transparent;}
+        .filter-tag:hover { color: var(--text-main); border-color: var(--border-light);}
+        .filter-tag.active { background: var(--text-main); color: var(--bg-card); border-color: var(--text-main);}
+        .masonry-board { column-count: 3; column-gap: 24px; }
+        @media (max-width: 1200px) { .masonry-board { column-count: 2; } }
+        @media (max-width: 800px) { .masonry-board { column-count: 1; } }
+        .masonry-card { break-inside: avoid; margin-bottom: 24px; padding: 20px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; display: flex; flex-direction: column; gap: 12px;}
+
+        /* ======= 模态框通用 ======= */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay-bg); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-overlay.show { display: flex; }
+        .custom-modal { background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; max-height: 85vh; overflow: hidden; border: 1px solid var(--border-light);}
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; background: var(--bg-body);}
+        .modal-close { cursor: pointer; color: var(--text-muted); font-size: 20px; border: none; background: none; }
+        
+        .scene-modal { width: 900px; max-width: 95%; background: var(--bg-body); }
+        .scene-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; padding: 24px; overflow-y: auto; flex: 1;}
+        .scene-card { background: var(--bg-card); border: 1px solid var(--border-light); padding: 16px; border-radius: 8px; cursor: grab; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; gap: 8px;}
+        .scene-card:active { cursor: grabbing; transform: scale(1.02); box-shadow: var(--shadow-md);}
+        .scene-drag-handle { font-size: 16px; color: var(--text-muted); text-align: center; cursor: grab; margin-bottom: 4px;}
+
+        /* ======= iOS 悬浮球 ======= */
+        .ios-fab { position: fixed; right: 32px; bottom: 32px; width: 56px; height: 56px; background: var(--text-main); color: var(--bg-card); border-radius: 50%; box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 9999; transition: transform 0.2s; font-size: 24px;}
+        .ios-fab:hover { transform: scale(1.05); }
+        .ios-badge { position: absolute; top: -2px; right: -2px; background: var(--danger); color: white; font-size: 11px; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 2px solid var(--bg-card); }
+        .ios-panel { position: fixed; right: 32px; bottom: 104px; width: 340px; background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px; box-shadow: var(--shadow-md); z-index: 9998; opacity: 0; pointer-events: none; transform: translateY(10px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden;}
+        .ios-panel.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .ios-panel-header { padding: 16px 20px; background: var(--bg-body); border-bottom: 1px solid var(--border-light); font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center;}
+        .ios-panel-content { max-height: 400px; overflow-y: auto; padding: 0; }
+        .ios-task-row { display: flex; align-items: flex-start; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--bg-body); transition: background 0.2s; cursor: pointer;}
+        .ios-task-row:hover { background: var(--bg-body); }
+        .ios-checkbox { width: 18px; height: 18px; border: 2px solid var(--text-muted); border-radius: 50%; cursor: pointer; flex-shrink: 0; margin-top: 2px; transition: all 0.2s;}
+        .ios-checkbox.checked { background: var(--text-main); border-color: var(--text-main); position: relative;}
+        .ios-checkbox.checked::after { content: ''; position: absolute; left: 5px; top: 2px; width: 3px; height: 7px; border: solid var(--bg-card); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+        .ios-task-text { font-size: 13px; line-height: 1.5; color: var(--text-main);}
+        .ios-task-text.completed { text-decoration: line-through; color: var(--text-muted); }
+
+        .notification { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--text-main); color: var(--bg-card); padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 500; z-index: 10000; opacity: 0; transition: all 0.3s; pointer-events: none; }
+        .notification.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        
+        .shortcut-tips { font-size: 12px; color: var(--text-muted); margin-top: 8px; display: flex; gap: 16px; justify-content: center;}
+        .editor-context-menu { position: fixed; display: none; min-width: 150px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-light); border-radius: 8px; box-shadow: var(--shadow-md); padding: 6px; z-index: 11000; }
+        .editor-context-menu.show { display: block; }
+        .editor-context-menu button { width: 100%; border: none; background: transparent; color: inherit; padding: 10px 12px; border-radius: 6px; font-family: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+        .editor-context-menu button:hover { background: var(--bg-body); }
+
+        /* ======= 云端登录 ======= */
+        .cloud-pill { margin-top: 16px; border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; background: var(--bg-body); }
+        .cloud-status { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px; word-break: break-word; }
+        .cloud-actions { display: flex; gap: 8px; }
+        .cloud-actions .btn { flex: 1; padding: 7px 10px; font-size: 12px; }
+        .auth-note { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin: -8px 0 18px; }
+        .cloud-sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; margin-right: 6px; vertical-align: middle; }
+        .cloud-sync-dot.ready { background: #22c55e; }
+        .cloud-sync-dot.offline { background: #a1a1aa; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar" id="mainSidebar">
+        <div class="logo-area"><div class="logo-icon">W</div>WRITER PRO</div>
+        <div class="nav-menu">
+            <div class="nav-item active" onclick="switchTab('editor')"><div class="nav-item-left">📝 沉浸写作</div></div>
+            <div class="nav-item" onclick="switchTab('projects')"><div class="nav-item-left">🎬 剧本库</div></div>
+            <div class="nav-item" onclick="switchTab('ai-reader')"><div class="nav-item-left">📚 AI拆书台</div></div>
+            <div class="nav-item" onclick="switchTab('plan')"><div class="nav-item-left">📋 计划任务</div></div>
+            <div class="nav-item" onclick="switchTab('generator')"><div class="nav-item-left">🎲 扭蛋大纲</div></div>
+            <div class="nav-item" onclick="switchTab('inspiration')"><div class="nav-item-left">💡 灵感看板</div></div>
+        </div>
+        <div class="bottom-controls">
+            <div class="control-header"><div class="control-title">Focus Audio</div><button class="theme-toggle" id="themeBtn" onclick="toggleTheme()">🌙</button></div>
+            <div class="noise-btn-group"><button class="noise-btn" id="btn-rain" title="白噪音">🌧️</button><button class="noise-btn" id="btn-cafe" title="环境音">☕</button><button class="noise-btn" id="btn-fire" title="红噪音">🔥</button></div>
+            <div class="volume-container"><span class="volume-icon">🔈</span><input type="range" class="volume-slider" id="noise-volume" min="0" max="100" value="50"></div>
+            <div class="cloud-pill">
+                <div class="cloud-status" id="cloudStatus"><span class="cloud-sync-dot offline"></span>云端未连接</div>
+                <div class="cloud-actions">
+                    <button class="btn btn-outline" onclick="openAuthModal()">登录</button>
+                    <button class="btn btn-outline" onclick="openCloudSettings()">设置</button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content" id="mainContent">
+        <div id="tab-ai-reader" class="tab-content">
+            <div class="page-header">
+                <div class="page-title">
+                    <h2><button class="sidebar-toggle-btn" onclick="toggleSidebar()">☰</button> AI 智能拆书</h2>
+                    <p>上传小说文档，调用各大模型 API 纯净提取爽文架构（严格摒弃 Markdown 乱码）。</p>
+                </div>
+                <button class="btn btn-outline" onclick="openAiSettings()">⚙️ 配置模型 API</button>
+            </div>
+            <div class="ai-upload-area" id="aiDropZone" onclick="document.getElementById('aiFileInput').click()">
+                <div class="ai-upload-icon">📄</div>
+                <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">点击或拖拽小说 .txt 文件到此处</div>
+                <div style="font-size: 13px; color: var(--text-muted);">系统将在本地读取并自动拼接发送给大模型处理</div>
+                <input type="file" id="aiFileInput" accept=".txt" style="display: none;" onchange="handleAiFileUpload(event)">
+            </div>
+            <div class="ai-result-box" id="aiResultBox">
+                <div class="ai-result-header">
+                    <span id="aiResultStatus" style="display: flex; align-items: center;">等待解析...</span>
+                    <div>
+                        <button class="btn btn-outline" style="background: var(--bg-body); border: none; padding: 4px 12px; font-size: 12px;" onclick="copyAiResult()">复制内容</button>
+                        <button class="btn btn-primary" style="padding: 4px 12px; font-size: 12px; margin-left: 8px;" onclick="convertAiToProject()">存入剧本库</button>
+                    </div>
+                </div>
+                <div class="ai-result-content" id="aiResultContent"></div>
+            </div>
+        </div>
+
+        <div id="tab-projects" class="tab-content">
+            <div class="page-header">
+                <div class="page-title"><h2><button class="sidebar-toggle-btn" onclick="toggleSidebar()">☰</button> 剧本库</h2><p>已全量升级 IndexedDB 存储底座，单机可存百部剧本不卡顿。</p></div>
+                <button class="btn btn-primary" onclick="createNewProject()">+ 创建新剧本</button>
+            </div>
+            <div class="project-grid" id="projectGrid"></div>
+        </div>
+
+        <div id="tab-editor" class="tab-content active">
+            <div class="page-header" style="margin-bottom: 24px;">
+                <div class="page-title"><h2><button class="sidebar-toggle-btn" onclick="toggleSidebar()">☰</button> 沉浸写作</h2><p>支持场次看板上帝视角与硬盘直连同步。</p></div>
+            </div>
+            <div class="editor-wrapper">
+                <div class="chapter-tree"><div class="tree-header">分集大纲导航</div><div id="chapterList" style="display: flex; flex-direction: column; gap: 4px;"></div></div>
+                <div class="editor-main">
+                    <div class="editor-header-bar">
+                        <div class="current-proj-name"><span style="opacity: 0.7;">当前：</span><span id="displayProjTitle">未选择</span></div>
+                        <div class="editor-btn-group">
+                            <button class="btn btn-outline" onclick="manualCloudSync()">☁️ 云端同步</button>
+                            <button class="btn btn-outline" onclick="openSceneBoard()" title="拖拽调整章节场次顺序">🗂️ 场次上帝视角</button>
+                            <button class="btn btn-outline" id="localSyncBtn" onclick="linkLocalFile()">🔗 硬盘直连</button>
+                            <button class="btn btn-outline" onclick="toggleZenMode()" id="zenBtn">🔍 沉浸全屏</button>
+                            <button class="btn btn-outline" onclick="openHistoryModal()">⏳ 时光机</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="padding: 0; box-shadow: var(--shadow-sm); border-radius: 8px; background: var(--bg-card); position: relative; overflow: hidden;">
+                        
+                        <div class="quick-tools">
+                            <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">🖱️ 快捷输入：</span>
+                            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; background: var(--bg-body);" onclick="insertSymbol('【】')">【】 角色框</button>
+                            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px; background: var(--bg-body);" onclick="insertSymbol('\n△ ')">△ 动作标</button>
+                        </div>
+
+                        <button id="oocBtn" onclick="triggerOocCheck()">🤖 OOC 风险检测</button>
+                        
+                        <textarea id="editor" placeholder="在此开始撰写正文。写下诸如【第一集】或【第1场】系统会自动解析结构..."></textarea>
+                    </div>
+                    <div class="shortcut-tips">
+                        <span>⌨️ 快捷键： <b>Alt(Option) + Q</b> 插入【】角色框</span>
+                        <span><b>Alt(Option) + W</b> 插入 △ 动作标</span>
+                    </div>
+                </div>
+                <div class="right-panel">
+                    <div class="panel-tabs">
+                        <div class="panel-tab active" id="tab-stat-btn" onclick="switchRightPanel('stat')">数据监控</div>
+                        <div class="panel-tab" id="tab-char-btn" onclick="switchRightPanel('char')">角色卡</div>
+                        <div class="panel-tab" id="tab-ref-btn" onclick="switchRightPanel('ref')">灵感</div>
+                    </div>
+                    <div class="panel-content" id="panel-stat">
+                        <div class="stat-mini"><span class="stat-mini-label">总实字数</span><span class="stat-mini-value" id="currentWords">0</span></div>
+                        <div class="stat-mini"><span class="stat-mini-label">本次新增</span><span class="stat-mini-value" id="sessionWords">0</span></div>
+                        <div class="stat-mini"><span class="stat-mini-label">码字时速</span><span class="stat-mini-value" id="writingSpeed">0</span></div>
+                        <div style="margin-top: 24px;">
+                            <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="saveManualSnapshot()">💾 手动建快照</button>
+                            <button class="btn btn-outline" style="width: 100%; margin-bottom: 8px;" onclick="exportDocument('txt')">导出 TXT 纯文本</button>
+                            <button class="btn btn-outline" style="width: 100%; border-color: #2b579a; color: #2b579a;" onclick="exportDocument('doc')">📄 导出 Word (.doc)</button>
+                        </div>
+                    </div>
+                    <div class="panel-content" id="panel-char" style="display: none;">
+                        <button class="btn btn-outline" style="width: 100%; margin-bottom: 16px; border-style: dashed;" onclick="openAddCharModal()">+ 录入新角色设定</button>
+                        <div id="characterList"></div>
+                    </div>
+                    <div class="panel-content" id="panel-ref" style="display: none;"><div id="referenceContainer"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-plan" class="tab-content"><div class="page-header"><div class="page-title"><h2><button class="sidebar-toggle-btn" onclick="toggleSidebar()">☰</button> 计划与任务</h2></div></div><div class="plan-layout"><div class="card" style="height: fit-content;"><div class="form-group"><label>任务标题</label><input type="text" id="planTitle" class="form-control"></div><div class="form-group"><label>截止日期</label><input type="date" id="planDeadline" class="form-control"></div><button class="btn btn-primary" style="width: 100%;" onclick="addPlan()">录入</button></div><div id="planListContainer"></div></div></div>
+        <div id="tab-generator" class="tab-content"><div class="page-header"><div class="page-title"><h2><button class="sidebar-toggle-btn" onclick="toggleSidebar()">☰</button> 扭蛋大纲生成器</h2></div></div><div class="generator-layout"><div class="card gen-controls"><button class="btn btn-primary" style="padding: 16px; font-size: 15px;" onclick="generateOutline()">🎲 随机扭一个新大纲</button><button class="btn btn-outline" style="margin-top: 12px;" onclick="exportOutline()">📥 导出大纲为文本</button></div><div class="card gen-result-card" id="generatedOutline"><div style="color:var(--text-muted); text-align:center; margin:auto;">点击左侧生成。</div></div></div></div>
+        <div id="tab-inspiration" class="tab-content"><div class="page-header"><div class="page-title"><h2><button class="sidebar-toggle-btn" onclick="toggleSidebar()">☰</button> 灵感无界看板</h2></div></div>
+            <div class="card" style="margin-bottom: 24px; display: none; border-color: var(--text-main);" id="bulkInputArea">
+                <div class="form-group"><label>批量录入</label><textarea id="bulkContent" class="form-control" rows="5" placeholder="直接粘贴列表即可..."></textarea></div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <select id="bulkCategory" class="form-control" style="width: auto;"><option value="plot">短剧梗</option><option value="idea">脑洞反转</option><option value="dialogue">台词</option><option value="male">男主</option><option value="female">女主</option><option value="trend">热梗</option></select>
+                    <button class="btn btn-outline" onclick="toggleBulkArea()">取消</button>
+                    <button class="btn btn-primary" onclick="processBulkImport()">确认切分入库</button>
+                </div>
+            </div>
+            <div class="inspiration-toolbar"><div class="filter-tags"><div class="filter-tag active" onclick="filterInsp('all')">全部</div><div class="filter-tag" onclick="filterInsp('plot')">短剧梗</div><div class="filter-tag" onclick="filterInsp('idea')">脑洞</div><div class="filter-tag" onclick="filterInsp('dialogue')">台词</div><div class="filter-tag" onclick="filterInsp('male')">男主</div><div class="filter-tag" onclick="filterInsp('female')">女主</div><div class="filter-tag" onclick="filterInsp('trend')">热梗</div></div><button class="btn btn-primary" onclick="toggleBulkArea()">+ 批量导入 / 新增</button></div><div class="masonry-board" id="masonryBoard"></div></div>
+    </main>
+
+    <div class="modal-overlay" id="historyModal" onclick="if(event.target === this) closeHistoryModal()"><div class="custom-modal" style="width: 600px; max-width: 90%;"><div class="modal-header"><div style="font-weight: 600;">⏳ 时光机</div><button class="modal-close" onclick="closeHistoryModal()">&times;</button></div><div class="history-list" id="historyList"></div></div></div>
+    <div class="modal-overlay" id="sceneBoardModal" onclick="if(event.target === this) closeSceneBoard()"><div class="custom-modal scene-modal"><div class="modal-header"><div style="font-weight: 600;">🗂️ 场次看板 (拖拽重排)</div><div><button class="btn btn-outline" style="margin-right: 8px;" onclick="closeSceneBoard()">取消</button><button class="btn btn-primary" onclick="applySceneOrder()">确认应用顺序</button></div></div><div class="scene-grid" id="sceneGrid"></div></div></div>
+    
+    <div class="modal-overlay" id="addCharModal" onclick="if(event.target === this) closeAddCharModal()">
+        <div class="custom-modal" style="width: 400px; max-width: 95%; padding: 24px;">
+            <h3 style="margin-bottom: 20px;">👤 录入核心角色设定</h3>
+            <div class="form-group"><label>角色姓名</label><input type="text" id="charName" class="form-control"></div>
+            <div class="form-group"><label>核心动机 (TA最想要什么?)</label><input type="text" id="charMotive" class="form-control" placeholder="例：为了复仇不择手段"></div>
+            <div class="form-group"><label>底层逻辑 (TA的行事底线)</label><input type="text" id="charLogic" class="form-control" placeholder="例：只认钱不认人，但极其护短"></div>
+            <div class="form-group"><label>标志性口头禅</label><input type="text" id="charPhrase" class="form-control" placeholder="例：天凉了，该破产了"></div>
+            <div style="display: flex; gap: 12px; margin-top: 24px;"><button class="btn btn-outline" style="flex: 1;" onclick="closeAddCharModal()">取消</button><button class="btn btn-primary" style="flex: 1;" onclick="saveCharacter()">保存角色</button></div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="aiSettingsModal" onclick="if(event.target === this) closeAiSettings()">
+        <div class="custom-modal" style="width: 550px; max-width: 95%; padding: 32px;">
+            <h3 style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">⚙️ 配置大模型 API 接口<button class="modal-close" onclick="closeAiSettings()">&times;</button></h3>
+            <div class="form-group"><label>API 供应商格式</label><select id="aiProvider" class="form-control" onchange="handleProviderChange()"><option value="openai">OpenAI 兼容 (DeepSeek/Kimi/通义等)</option><option value="anthropic">Anthropic (Claude 3)</option><option value="gemini">Google (Gemini 1.5)</option></select></div>
+            <div class="form-group" id="baseUrlGroup"><label>接口地址 (Base URL)</label><input type="text" id="aiBaseUrl" class="form-control" placeholder="例如: https://api.deepseek.com/v1"></div>
+            <div class="form-group"><label>API Key <span style="font-weight:normal; color:var(--text-muted);">(安全本地存储)</span></label><input type="password" id="aiApiKey" class="form-control" placeholder="输入密钥 sk-..."></div>
+            <div class="form-group"><label>选择处理模型</label><div style="display: flex; gap: 8px;"><select id="aiModelSelect" class="form-control" style="flex: 1;"></select><button class="btn btn-outline" id="fetchModelsBtn" onclick="fetchOpenAIModels()" style="flex-shrink: 0;">获取可用模型</button></div><div id="aiConfigStatus" class="api-status"></div></div>
+            <div style="display: flex; gap: 12px; margin-top: 12px;"><button class="btn btn-outline" style="flex: 1;" onclick="closeAiSettings()">取消</button><button class="btn btn-primary" style="flex: 1;" onclick="saveAiSettings()">💾 保存并应用</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="authModal" onclick="if(event.target === this) closeAuthModal()">
+        <div class="custom-modal" style="width: 430px; max-width: 95%; padding: 28px;">
+            <h3 style="margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">☁️ 云端登录<button class="modal-close" onclick="closeAuthModal()">&times;</button></h3>
+            <div class="auth-note">只允许 QQ 邮箱。登录后，你的剧本库、角色卡、灵感和计划会自动存在云端。</div>
+            <div class="form-group"><label>QQ 邮箱</label><input type="email" id="authEmail" class="form-control" placeholder="你的QQ号@qq.com"></div>
+            <div class="form-group"><label>密码</label><input type="password" id="authPassword" class="form-control" placeholder="至少 6 位"></div>
+            <div style="display: flex; gap: 10px; margin-top: 6px;">
+                <button class="btn btn-primary" style="flex: 1;" onclick="signInWithEmail()">登录</button>
+                <button class="btn btn-outline" style="flex: 1;" onclick="signUpWithEmail()">注册</button>
+            </div>
+            <button class="btn btn-outline" style="width: 100%; margin-top: 10px;" onclick="signOutCloud()">退出当前账号</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="cloudSettingsModal" onclick="if(event.target === this) closeCloudSettings()">
+        <div class="custom-modal" style="width: 520px; max-width: 95%; padding: 28px;">
+            <h3 style="margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">☁️ 云端设置<button class="modal-close" onclick="closeCloudSettings()">&times;</button></h3>
+            <div class="auth-note">填入 Supabase 项目的网址和公开钥匙。它们会保存在这台电脑的浏览器里；部署到 Vercel 后，也可以在 Vercel 里统一填写。</div>
+            <div class="form-group"><label>Supabase 项目网址</label><input type="text" id="supabaseUrl" class="form-control" placeholder="https://xxxx.supabase.co"></div>
+            <div class="form-group"><label>Supabase 公开钥匙</label><input type="password" id="supabaseAnonKey" class="form-control" placeholder="eyJ..."></div>
+            <div style="display: flex; gap: 10px; margin-top: 6px;">
+                <button class="btn btn-outline" style="flex: 1;" onclick="closeCloudSettings()">取消</button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="saveCloudSettings()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ios-fab" onclick="toggleIosPanel()">📋<div class="ios-badge" id="iosBadge" style="display: none;">0</div></div>
+    <div class="ios-panel" id="iosPanel"><div class="ios-panel-header">今日待办<span style="font-size: 12px; color: var(--text-muted); cursor: pointer;" onclick="switchTab('plan'); toggleIosPanel()">管理</span></div><div class="ios-panel-content" id="iosPanelContent"></div></div>
+    
+    <div class="editor-context-menu" id="editorContextMenu">
+        <button type="button" onclick="insertTriangleFromMenu()">△ 插入动作标</button>
+    </div>
+
+    <div id="toast" class="notification"></div>
+
+    <script>
+        // ================= 基础交互 =================
+        function toggleSidebar() { document.getElementById('mainSidebar').classList.toggle('collapsed'); document.getElementById('mainContent').classList.toggle('expanded'); }
+        let isZenMode = false;
+        function toggleZenMode() { isZenMode = !isZenMode; document.body.classList.toggle('zen-mode', isZenMode); const btn = document.getElementById('zenBtn'); if(isZenMode) { btn.innerText = '👉 退出全屏'; if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(e=>e); } else { btn.innerText = '🔍 沉浸全屏'; if (document.fullscreenElement) document.exitFullscreen().catch(e=>e); } }
+        const themeModes = ['light', 'dark', 'eye'];
+        let currentTheme = localStorage.getItem('writerThemeMode') || (localStorage.getItem('writerDarkMode') === 'true' ? 'dark' : 'light');
+        if (!themeModes.includes(currentTheme)) currentTheme = 'light';
+        function applyTheme() {
+            document.body.classList.toggle('dark-mode', currentTheme === 'dark');
+            document.body.classList.toggle('eye-mode', currentTheme === 'eye');
+            const labels = { light: '🌙', dark: '🌿', eye: '☀️' };
+            const titles = { light: '切换到黑夜模式', dark: '切换到护眼模式', eye: '切换到白天模式' };
+            const btn = document.getElementById('themeBtn');
+            btn.innerText = labels[currentTheme];
+            btn.title = titles[currentTheme];
+            localStorage.setItem('writerThemeMode', currentTheme);
+            localStorage.setItem('writerDarkMode', currentTheme === 'dark');
+        }
+        function toggleTheme() { currentTheme = themeModes[(themeModes.indexOf(currentTheme) + 1) % themeModes.length]; applyTheme(); }
+        applyTheme();
+        function showToast(msg) { const t = document.getElementById('toast'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
+        function switchTab(id) {
+            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+            const clicked = window.event && window.event.currentTarget && window.event.currentTarget.classList && window.event.currentTarget.classList.contains('nav-item') ? window.event.currentTarget : null;
+            const fallback = [...document.querySelectorAll('.nav-item')].find(e => e.getAttribute('onclick') && e.getAttribute('onclick').includes(`'${id}'`));
+            (clicked || fallback)?.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active'));
+            document.getElementById(`tab-${id}`).classList.add('active');
+            if (id === 'projects') renderProjects(); if (id === 'inspiration') renderInspirations(); if (id === 'plan') renderPlans();
+        }
+
+        // ================= 白噪音引擎 =================
+        class AudioEngine {
+            constructor() { this.audioCtx = null; this.isPlaying = false; }
+            init() { if(!this.audioCtx) { this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); this.masterGain = this.audioCtx.createGain(); this.masterGain.connect(this.audioCtx.destination); this.masterGain.gain.value = 0.5; } }
+            createNoiseBuffer(type) { const b = this.audioCtx.createBuffer(1, this.audioCtx.sampleRate * 2, this.audioCtx.sampleRate); const out = b.getChannelData(0); let last = 0; for (let i = 0; i < b.length; i++) { const w = Math.random() * 2 - 1; if(type==='rain') out[i] = w * 0.5; else if(type==='cafe') { out[i] = (last + 0.02 * w) / 1.02; last = out[i]; out[i]*=3.5; } else { out[i] = (last + 0.02 * w) / 1.02; last = out[i]; out[i]*=5.0; } } return b; }
+            play(type) { this.init(); if(this.audioCtx.state==='suspended') this.audioCtx.resume(); this.stop(); this.src = this.audioCtx.createBufferSource(); this.src.buffer = this.createNoiseBuffer(type); this.src.loop = true; this.filter = this.audioCtx.createBiquadFilter(); if(type==='rain'){ this.filter.type='lowpass'; this.filter.frequency.value=1000; } else if(type==='cafe'){ this.filter.type='bandpass'; this.filter.frequency.value=400; this.filter.Q.value=0.5; } else { this.filter.type='lowpass'; this.filter.frequency.value=300; } this.src.connect(this.filter); this.filter.connect(this.masterGain); this.src.start(); this.isPlaying = true; }
+            stop() { if(this.src) { this.src.stop(); this.src.disconnect(); this.filter.disconnect(); this.isPlaying = false; } }
+            setVolume(v) { if(this.masterGain) this.masterGain.gain.value = v/100; }
+        }
+        const ae = new AudioEngine();
+        ['rain','cafe','fire'].forEach(t => { document.getElementById('btn-'+t).addEventListener('click', function() { const act = this.classList.contains('active'); document.querySelectorAll('.noise-btn').forEach(b => b.classList.remove('active')); if(act) ae.stop(); else { this.classList.add('active'); ae.play(t); } }); }); document.getElementById('noise-volume').addEventListener('input', e => ae.setVolume(e.target.value));
+
+        // ================= 核心数据库 =================
+        let db = { activeProjectId: null, projects: [], plans: [], inspiration: { plot: [], idea: [], dialogue: [], male: [], female: [], trend: [] } };
+        const categoryNames = { 'plot': '短剧梗', 'idea': '脑洞', 'dialogue': '台词', 'male': '男主', 'female': '女主', 'trend': '热梗' };
+        let supabaseClient = null;
+        let cloudUser = null;
+        let cloudSaveTimer = null;
+        let cloudReady = false;
+        let cloudConfig = { url: '', anonKey: '' };
+        const QQ_EMAIL_RE = /^[^@\s]+@qq\.com$/i;
+        
+        async function initDB() {
+            localforage.config({ name: 'WriterStudioPro', storeName: 'WriterDB' });
+            try {
+                await initCloud();
+                let storedDB = await localforage.getItem('core_db');
+                if (!storedDB) {
+                    const oldDb = localStorage.getItem('writerStudioDB_Final8');
+                    if (oldDb) { storedDB = JSON.parse(oldDb); console.log("已成功将旧版 LocalStorage 数据迁移至 IndexedDB"); }
+                }
+                
+                if (cloudUser) {
+                    const cloudDB = await loadCloudData();
+                    if (cloudDB) storedDB = cloudDB;
+                }
+
+                if (storedDB) { db = storedDB; } 
+                else {
+                    const defId = Date.now().toString(); 
+                    db.projects.push({ id: defId, title: '未命名短剧', content: '', wordCount: 0, lastEdited: Date.now(), characters: [], snapshots: [] }); 
+                    db.activeProjectId = defId;
+                }
+                
+                db.projects.forEach(p => { if(!p.characters) p.characters = []; });
+                loadActiveProjectToEditor(); renderPlans();
+                if (cloudUser) queueCloudSave(true);
+            } catch (e) {
+                console.error('数据库初始化失败', e); showToast('数据库加载失败');
+            }
+        }
+
+        function saveData() { localforage.setItem('core_db', db).catch(e => console.error('存储失败', e)); updateIosWidget(); queueCloudSave(); }
+
+        function updateCloudStatus(text, state = 'offline') {
+            const el = document.getElementById('cloudStatus');
+            if (!el) return;
+            el.innerHTML = `<span class="cloud-sync-dot ${state}"></span>${text}`;
+        }
+
+        function isQQEmail(email) { return QQ_EMAIL_RE.test((email || '').trim()); }
+
+        async function loadCloudConfig() {
+            const localConfig = JSON.parse(localStorage.getItem('writerSupabaseConfig') || '{}');
+            try {
+                const res = await fetch('/api/config');
+                if (res.ok) {
+                    const remoteConfig = await res.json();
+                    cloudConfig = {
+                        url: remoteConfig.supabaseUrl || localConfig.url || '',
+                        anonKey: remoteConfig.supabaseAnonKey || localConfig.anonKey || ''
+                    };
+                    return;
+                }
+            } catch(e) {}
+            cloudConfig = { url: localConfig.url || '', anonKey: localConfig.anonKey || '' };
+        }
+
+        async function initCloud() {
+            await loadCloudConfig();
+            if (!cloudConfig.url || !cloudConfig.anonKey || !window.supabase) {
+                cloudReady = false;
+                updateCloudStatus('云端待设置', 'offline');
+                return;
+            }
+            supabaseClient = window.supabase.createClient(cloudConfig.url, cloudConfig.anonKey);
+            const { data } = await supabaseClient.auth.getSession();
+            cloudUser = data.session?.user || null;
+            if (cloudUser && !isQQEmail(cloudUser.email)) {
+                await supabaseClient.auth.signOut();
+                cloudUser = null;
+                updateCloudStatus('仅允许 QQ 邮箱登录', 'offline');
+                return;
+            }
+            cloudReady = true;
+            updateCloudStatus(cloudUser ? `已登录：${cloudUser.email}` : '云端已设置，未登录', cloudUser ? 'ready' : '');
+            supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+                cloudUser = session?.user || null;
+                if (cloudUser && !isQQEmail(cloudUser.email)) {
+                    await supabaseClient.auth.signOut();
+                    cloudUser = null;
+                    showToast('只允许 QQ 邮箱');
+                }
+                updateCloudStatus(cloudUser ? `已登录：${cloudUser.email}` : '云端已设置，未登录', cloudUser ? 'ready' : '');
+            });
+        }
+
+        async function loadCloudData() {
+            if (!supabaseClient || !cloudUser) return null;
+            const { data, error } = await supabaseClient
+                .from('writer_workspaces')
+                .select('data')
+                .eq('user_id', cloudUser.id)
+                .maybeSingle();
+            if (error) {
+                console.error('云端读取失败', error);
+                showToast('云端读取失败，请检查云端表格');
+                return null;
+            }
+            if (data?.data) {
+                updateCloudStatus(`已从云端载入：${cloudUser.email}`, 'ready');
+                return data.data;
+            }
+            return null;
+        }
+
+        function queueCloudSave(now = false) {
+            if (!cloudReady || !supabaseClient || !cloudUser) return;
+            clearTimeout(cloudSaveTimer);
+            cloudSaveTimer = setTimeout(saveCloudData, now ? 0 : 900);
+        }
+
+        async function saveCloudData() {
+            if (!supabaseClient || !cloudUser) return;
+            updateCloudStatus('正在保存到云端...', '');
+            const { error } = await supabaseClient
+                .from('writer_workspaces')
+                .upsert({ user_id: cloudUser.id, data: db, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+            if (error) {
+                console.error('云端保存失败', error);
+                updateCloudStatus('云端保存失败', 'offline');
+                showToast('云端保存失败');
+                return;
+            }
+            updateCloudStatus(`已自动保存：${cloudUser.email}`, 'ready');
+        }
+
+        async function manualCloudSync() {
+            if (!cloudReady) { openCloudSettings(); return showToast('先完成云端设置'); }
+            if (!cloudUser) { openAuthModal(); return showToast('先登录 QQ 邮箱'); }
+            await saveCloudData();
+            showToast('已同步到云端');
+        }
+
+        function openAuthModal() { document.getElementById('authModal').classList.add('show'); }
+        function closeAuthModal() { document.getElementById('authModal').classList.remove('show'); }
+        function openCloudSettings() {
+            document.getElementById('supabaseUrl').value = cloudConfig.url || '';
+            document.getElementById('supabaseAnonKey').value = cloudConfig.anonKey || '';
+            document.getElementById('cloudSettingsModal').classList.add('show');
+        }
+        function closeCloudSettings() { document.getElementById('cloudSettingsModal').classList.remove('show'); }
+
+        async function saveCloudSettings() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const anonKey = document.getElementById('supabaseAnonKey').value.trim();
+            if (!url || !anonKey) return showToast('请填完整');
+            localStorage.setItem('writerSupabaseConfig', JSON.stringify({ url, anonKey }));
+            closeCloudSettings();
+            showToast('云端设置已保存');
+            await initCloud();
+        }
+
+        async function signUpWithEmail() {
+            if (!cloudReady || !supabaseClient) { openCloudSettings(); return showToast('先完成云端设置'); }
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            if (!isQQEmail(email)) return showToast('只能用 QQ 邮箱注册');
+            const { error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) return showToast(error.message);
+            showToast('注册成功，请去邮箱点确认邮件');
+        }
+
+        async function signInWithEmail() {
+            if (!cloudReady || !supabaseClient) { openCloudSettings(); return showToast('先完成云端设置'); }
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            if (!isQQEmail(email)) return showToast('只能用 QQ 邮箱登录');
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) return showToast(error.message);
+            cloudUser = data.user;
+            const cloudDB = await loadCloudData();
+            if (cloudDB) {
+                db = cloudDB;
+                await localforage.setItem('core_db', db);
+                loadActiveProjectToEditor(); renderPlans(); renderProjects(); renderInspirations();
+            } else {
+                await saveCloudData();
+            }
+            closeAuthModal();
+            updateCloudStatus(`已登录：${email}`, 'ready');
+            showToast('登录成功，已连接云端');
+        }
+
+        async function signOutCloud() {
+            if (supabaseClient) await supabaseClient.auth.signOut();
+            cloudUser = null;
+            closeAuthModal();
+            updateCloudStatus(cloudReady ? '云端已设置，未登录' : '云端待设置', cloudReady ? '' : 'offline');
+            showToast('已退出');
+        }
+
+        // ================= 🤖 AI 接口配置中枢 =================
+        let aiConfig = JSON.parse(localStorage.getItem('writerAiConfig_V4')) || { provider: 'openai', baseUrl: 'https://api.deepseek.com/v1', modelName: 'deepseek-chat', apiKey: '' };
+        const presetModels = { anthropic: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'], gemini: ['gemini-1.5-pro-latest', 'gemini-1.5-flash-latest'] };
+
+        function openAiSettings() { 
+            document.getElementById('aiProvider').value = aiConfig.provider || 'openai';
+            document.getElementById('aiBaseUrl').value = aiConfig.baseUrl || '';
+            document.getElementById('aiApiKey').value = aiConfig.apiKey || '';
+            handleProviderChange(); 
+            const ms = document.getElementById('aiModelSelect');
+            if(aiConfig.modelName && !Array.from(ms.options).some(o => o.value === aiConfig.modelName)) { const o = document.createElement('option'); o.value = aiConfig.modelName; o.text = aiConfig.modelName; ms.add(o); }
+            ms.value = aiConfig.modelName; document.getElementById('aiConfigStatus').className = 'api-status'; document.getElementById('aiSettingsModal').classList.add('show'); 
+        }
+        function closeAiSettings() { document.getElementById('aiSettingsModal').classList.remove('show'); }
+        function handleProviderChange() {
+            const p = document.getElementById('aiProvider').value; const ms = document.getElementById('aiModelSelect'); ms.innerHTML = '';
+            if (p === 'openai') { document.getElementById('baseUrlGroup').style.display = 'block'; document.getElementById('fetchModelsBtn').style.display = 'inline-flex'; ms.innerHTML = '<option value="">请点击右侧获取模型，或手动填入</option>'; } 
+            else { document.getElementById('baseUrlGroup').style.display = 'none'; document.getElementById('fetchModelsBtn').style.display = 'none'; presetModels[p].forEach(m => { const o = document.createElement('option'); o.value = m; o.text = m; ms.add(o); }); }
+        }
+        async function fetchOpenAIModels() {
+            const sd = document.getElementById('aiConfigStatus'); const b = document.getElementById('aiBaseUrl').value.trim().replace(/\/$/, ""); const a = document.getElementById('aiApiKey').value.trim(); const ms = document.getElementById('aiModelSelect');
+            if (!b || !a) { sd.className = 'api-status error'; sd.innerText = '⚠️ 填写 Base URL 和 API Key'; return; }
+            sd.className = 'api-status'; sd.style.display = 'block'; sd.innerHTML = '<span class="loader" style="border-color:var(--text-main); border-top-color:transparent; width:14px; height:14px;"></span> 请求模型列表中...';
+            try {
+                const u = b.endsWith('/v1') ? `${b}/models` : `${b}/v1/models`; const r = await fetch(u, { method: 'GET', headers: { 'Authorization': `Bearer ${a}` } });
+                if (!r.ok) throw new Error(`HTTP ${r.status}`); const d = await r.json();
+                if (d.data && Array.isArray(d.data)) { ms.innerHTML = ''; d.data.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.text = m.id; ms.add(o); }); sd.className = 'api-status success'; sd.innerText = `✅ 成功获取 ${d.data.length} 个模型！`; } else throw new Error('返回格式不符合规范');
+            } catch (err) { sd.className = 'api-status error'; sd.innerText = `❌ 获取失败。`; const mm = prompt("拉取失败，请手动输入模型名 (如: gpt-3.5-turbo)："); if(mm) { ms.innerHTML = `<option value="${mm}">${mm}</option>`; sd.className = 'api-status success'; sd.innerText = `✅ 已手动指定：${mm}`; } }
+        }
+        function saveAiSettings() { aiConfig = { provider: document.getElementById('aiProvider').value, baseUrl: document.getElementById('aiBaseUrl').value.trim(), modelName: document.getElementById('aiModelSelect').value, apiKey: document.getElementById('aiApiKey').value.trim() }; if(!aiConfig.modelName) return showToast('⚠️ 必须指定模型'); localStorage.setItem('writerAiConfig_V4', JSON.stringify(aiConfig)); closeAiSettings(); showToast('✅ 接口配置成功！'); }
+
+        async function callAiApi(systemPrompt, userText) {
+            if(!aiConfig.apiKey || !aiConfig.modelName) throw new Error('未配置 API');
+            if (aiConfig.provider === 'openai') {
+                const b = aiConfig.baseUrl.replace(/\/$/, ""); const url = b.endsWith('/v1') ? `${b}/chat/completions` : `${b}/v1/chat/completions`;
+                const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${aiConfig.apiKey}` }, body: JSON.stringify({ model: aiConfig.modelName, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userText }], temperature: 0.7 }) });
+                if(!res.ok) throw new Error(`API 报错: HTTP ${res.status}`); const data = await res.json(); return data.choices[0].message.content;
+            } else if (aiConfig.provider === 'anthropic') {
+                const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': aiConfig.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerously-allow-browser': 'true' }, body: JSON.stringify({ model: aiConfig.modelName, max_tokens: 4000, system: systemPrompt, messages: [{ role: 'user', content: userText }] }) });
+                if(!res.ok) throw new Error(`Claude 报错: HTTP ${res.status}`); const data = await res.json(); return data.content[0].text;
+            } else if (aiConfig.provider === 'gemini') {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${aiConfig.modelName}:generateContent?key=${aiConfig.apiKey}`;
+                const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + userText }] }] }) });
+                if(!res.ok) throw new Error(`Gemini 报错: HTTP ${res.status}`); const data = await res.json();
+                if(data.candidates && data.candidates.length > 0) return data.candidates[0].content.parts[0].text; else throw new Error('Gemini 返回空内容');
+            }
+        }
+
+        // ================= AI 拆书逻辑 =================
+        let lastExtractedOutline = '';
+        const dropZone = document.getElementById('aiDropZone');
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--text-main)'; }); dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border-light)'; }); dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border-light)'; if(e.dataTransfer.files && e.dataTransfer.files.length > 0) processFileForAi(e.dataTransfer.files[0]); });
+        function handleAiFileUpload(e) { if(e.target.files && e.target.files.length > 0) processFileForAi(e.target.files[0]); }
+
+        function processFileForAi(file) {
+            if(!file.name.endsWith('.txt')) return showToast('目前仅支持 .txt 小说');
+            const reader = new FileReader(); reader.onload = function(e) { const chunk = e.target.result.substring(0, 18000); dispatchAiReaderRequest(chunk); }; reader.readAsText(file);
+        }
+
+        async function dispatchAiReaderRequest(bookText) {
+            const resultBox = document.getElementById('aiResultBox'); const statusText = document.getElementById('aiResultStatus'); const contentDiv = document.getElementById('aiResultContent');
+            resultBox.style.display = 'block'; contentDiv.innerHTML = ''; statusText.innerHTML = '<span class="loader"></span> 正在拆解爆款架构，请稍候...';
+            const systemPrompt = `你是一个顶级的短剧剧本统筹。请将小说内容拆解为短剧大纲。严格按6个模块输出纯文本，拒绝使用Markdown符号，直接用中文数字作为标题：一：一句话主线 二：人物小传 三：亮点人设 四：爆款切片噱头 五：重点剧情总结 六：短剧改编意见`;
+            try {
+                const aiText = await callAiApi(systemPrompt, `小说片段：\n\n${bookText}`);
+                lastExtractedOutline = aiText; statusText.innerHTML = '✅ 拆解成功！';
+                let formattedText = aiText.replace(/#/g, '').replace(/\*/g, '').replace(/(一：.*?)(?=\n|$)/g, '<div class="section-title">$1</div>').replace(/(二：.*?)(?=\n|$)/g, '<div class="section-title">$1</div>').replace(/(三：.*?)(?=\n|$)/g, '<div class="section-title">$1</div>').replace(/(四：.*?)(?=\n|$)/g, '<div class="section-title">$1</div>').replace(/(五：.*?)(?=\n|$)/g, '<div class="section-title">$1</div>').replace(/(六：.*?)(?=\n|$)/g, '<div class="section-title">$1</div>').replace(/\n/g, '<br>');
+                contentDiv.innerHTML = formattedText;
+            } catch (error) {
+                statusText.innerHTML = '<span style="color:var(--danger)">❌ 拆解失败</span>';
+                contentDiv.innerHTML = `<div style="color:var(--danger); font-weight:600;">错误信息：</div><div style="margin-top:12px; font-family:monospace;">${error.message}</div>`;
+            }
+        }
+        function copyAiResult() { navigator.clipboard.writeText(lastExtractedOutline).then(()=> showToast('已复制到剪贴板')); }
+        function convertAiToProject() { if(!lastExtractedOutline) return; const newId = Date.now().toString(); db.projects.push({ id: newId, title: 'AI拆书新建', content: lastExtractedOutline, wordCount: lastExtractedOutline.length, characters:[], lastEdited: Date.now(), snapshots: [] }); saveData(); showToast('已存入剧本库'); openProject(newId); }
+
+        // ================= 本地硬盘直连 =================
+        let currentFileHandle = null; let localWriteTimeout = null;
+        async function linkLocalFile() {
+            if(!window.showSaveFilePicker) return showToast('不支持硬盘直连，请使用新版Chrome');
+            try { currentFileHandle = await window.showSaveFilePicker({ suggestedName: '写作热备.txt', types: [{ description: '文本', accept: {'text/plain': ['.txt']} }] }); showToast('✅ 成功直连本地硬盘'); document.getElementById('localSyncBtn').classList.add('btn-primary'); document.getElementById('localSyncBtn').classList.remove('btn-outline'); triggerLocalWrite(document.getElementById('editor').value); } catch(e) {}
+        }
+        function triggerLocalWrite(text) { if(!currentFileHandle) return; clearTimeout(localWriteTimeout); localWriteTimeout = setTimeout(async () => { try { const writable = await currentFileHandle.createWritable(); await writable.write(text); await writable.close(); } catch(e) {} }, 1000); }
+
+        // ================= 编辑器增强与快捷符号 (核心修复区域) =================
+        const editor = document.getElementById('editor'); let sessionStartWords = 0; let firstKeystrokeTime = null; let autoSaveInterval;
+        
+        function insertTextAtCursor(text) {
+            const start = editor.selectionStart; const end = editor.selectionEnd;
+            editor.value = editor.value.substring(0, start) + text + editor.value.substring(end);
+            editor.selectionStart = editor.selectionEnd = start + text.length;
+            editor.focus();
+            editor.dispatchEvent(new Event('input'));
+        }
+
+        // 供鼠标点击和键盘快捷键统一调用的方法
+        function insertSymbol(type) {
+            if (type === '【】') {
+                insertTextAtCursor('【】');
+                editor.selectionStart -= 1; editor.selectionEnd -= 1;
+            } else {
+                insertTextAtCursor(type);
+            }
+            editor.focus();
+        }
+
+        const editorContextMenu = document.getElementById('editorContextMenu');
+        function hideEditorContextMenu() { editorContextMenu.classList.remove('show'); }
+        function insertTriangleFromMenu() {
+            insertSymbol('\n△ ');
+            hideEditorContextMenu();
+        }
+        editor.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            editorContextMenu.style.left = `${Math.min(e.clientX, window.innerWidth - 170)}px`;
+            editorContextMenu.style.top = `${Math.min(e.clientY, window.innerHeight - 64)}px`;
+            editorContextMenu.classList.add('show');
+        });
+        document.addEventListener('click', hideEditorContextMenu);
+        window.addEventListener('blur', hideEditorContextMenu);
+
+        editor.addEventListener('keydown', (e) => {
+            // Mac 核心修复：使用 e.code 替代 e.key，完美避开 Option 键带来的特殊字符映射问题
+            if (e.altKey && e.code === 'KeyQ') { 
+                e.preventDefault(); 
+                insertSymbol('【】'); 
+            }
+            if (e.altKey && e.code === 'KeyW') { 
+                e.preventDefault(); 
+                insertSymbol('\n△ '); 
+            }
+        });
+
+        // ================= OOC 悬浮检测 =================
+        const oocBtn = document.getElementById('oocBtn');
+        let selectedTextForOoc = '';
+        editor.addEventListener('mouseup', () => {
+            const text = editor.value.substring(editor.selectionStart, editor.selectionEnd).trim();
+            if(text.length > 5) {
+                selectedTextForOoc = text;
+                const { top, left } = getCaretCoordinates(editor, editor.selectionEnd);
+                oocBtn.style.display = 'block';
+                oocBtn.style.left = (left + 10) + 'px';
+                oocBtn.style.top = (top - 30) + 'px';
+            } else {
+                oocBtn.style.display = 'none';
+            }
+        });
+        editor.addEventListener('input', () => oocBtn.style.display = 'none');
+
+        function getCaretCoordinates(element, position) {
+            const div = document.createElement('div');
+            const style = div.style;
+            const computed = window.getComputedStyle ? getComputedStyle(element) : element.currentStyle;
+            style.whiteSpace = 'pre-wrap'; style.wordWrap = 'break-word'; style.position = 'absolute'; style.visibility = 'hidden';
+            ['direction', 'boxSizing', 'width', 'height', 'overflowX', 'overflowY', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderStyle', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize', 'fontSizeAdjust', 'lineHeight', 'fontFamily', 'textAlign', 'textTransform', 'textIndent', 'textDecoration', 'letterSpacing', 'wordSpacing', 'tabSize', 'MozTabSize'].forEach(prop => { style[prop] = computed[prop]; });
+            div.textContent = element.value.substring(0, position);
+            const span = document.createElement('span'); span.textContent = element.value.substring(position) || '.'; div.appendChild(span);
+            document.body.appendChild(div);
+            const coordinates = { top: span.offsetTop + parseInt(computed['borderTopWidth']), left: span.offsetLeft + parseInt(computed['borderLeftWidth']) };
+            document.body.removeChild(div);
+            return coordinates;
+        }
+
+        async function triggerOocCheck() {
+            const activeProj = db.projects.find(p => p.id === db.activeProjectId);
+            if(!activeProj || !activeProj.characters || activeProj.characters.length === 0) {
+                showToast('⚠️ 请先在右侧面板录入角色卡'); return;
+            }
+            if(!aiConfig.apiKey) { showToast('⚠️ 请先配置大模型 API'); return; }
+            
+            oocBtn.innerText = '检测中...';
+            const charContext = activeProj.characters.map(c => `【${c.name}】：动机-${c.motive}，逻辑-${c.logic}，口头禅-${c.phrase}`).join('\n');
+            const prompt = `你是专业的剧本 OOC(人物走形) 审查员。请参考以下角色设定：\n${charContext}\n\n审查以下段落是否存在 OOC 风险：\n"${selectedTextForOoc}"\n\n简短回答：1.是否OOC。2.改进建议（50字内）。`;
+            
+            try {
+                const res = await callAiApi(prompt, "请开始审查。");
+                alert("🤖 OOC 检测结果：\n\n" + res);
+            } catch(e) {
+                alert("检测失败：" + e.message);
+            }
+            oocBtn.innerText = '🤖 OOC 风险检测';
+            oocBtn.style.display = 'none';
+        }
+
+        // ================= 角色卡面板 =================
+        function openAddCharModal() { document.getElementById('addCharModal').classList.add('show'); }
+        function closeAddCharModal() { document.getElementById('addCharModal').classList.remove('show'); }
+        function saveCharacter() {
+            const activeProj = db.projects.find(p => p.id === db.activeProjectId);
+            const name = document.getElementById('charName').value.trim();
+            if(!name) return showToast('名字不能为空');
+            activeProj.characters.push({
+                id: Date.now(), name,
+                motive: document.getElementById('charMotive').value,
+                logic: document.getElementById('charLogic').value,
+                phrase: document.getElementById('charPhrase').value
+            });
+            saveData(); renderCharacterPanel(); closeAddCharModal();
+            document.getElementById('charName').value=''; document.getElementById('charMotive').value=''; document.getElementById('charLogic').value=''; document.getElementById('charPhrase').value='';
+        }
+        function renderCharacterPanel() {
+            const activeProj = db.projects.find(p => p.id === db.activeProjectId);
+            const container = document.getElementById('characterList'); container.innerHTML = '';
+            if(!activeProj || !activeProj.characters || activeProj.characters.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted); font-size:12px; text-align:center;">暂无角色，点击上方添加。避免人物崩坏是爆款的基础。</div>'; return;
+            }
+            activeProj.characters.forEach(c => {
+                const el = document.createElement('div'); el.className = 'char-card';
+                el.innerHTML = `
+                    <div class="char-header"><span class="char-name">${c.name}</span><span class="char-del" onclick="deleteChar(${c.id})">删除</span></div>
+                    <div class="char-field"><span class="char-label">核心动机</span><div class="char-value">${c.motive || '-'}</div></div>
+                    <div class="char-field"><span class="char-label">底层逻辑</span><div class="char-value">${c.logic || '-'}</div></div>
+                    <div class="char-field"><span class="char-label">口头禅</span><div class="char-value" style="font-style:italic;">“${c.phrase || '-'}”</div></div>
+                `;
+                container.appendChild(el);
+            });
+        }
+        function deleteChar(id) {
+            const activeProj = db.projects.find(p => p.id === db.activeProjectId);
+            activeProj.characters = activeProj.characters.filter(c => c.id !== id);
+            saveData(); renderCharacterPanel();
+        }
+
+        // ================= 编辑器、字数统计与大纲树 =================
+        function loadActiveProjectToEditor() {
+            const activeProj = db.projects.find(p => p.id === db.activeProjectId);
+            if (activeProj) { document.getElementById('displayProjTitle').innerText = activeProj.title; editor.value = activeProj.content || ''; sessionStartWords = editor.value.replace(/[\s\n\r]/g, '').length; firstKeystrokeTime = null; document.getElementById('writingSpeed').textContent = '0'; editor.dispatchEvent(new Event('input')); updateChapterTree(); renderReferencePanel(); renderCharacterPanel();}
+            clearInterval(autoSaveInterval); autoSaveInterval = setInterval(() => autoSnapshot(), 5 * 60 * 1000);
+        }
+        editor.addEventListener('input', () => {
+            const activeProj = db.projects.find(p => p.id === db.activeProjectId); if (!activeProj) return;
+            activeProj.content = editor.value; activeProj.lastEdited = Date.now();
+            const pure = editor.value.replace(/[\s\n\r]/g, '').length; activeProj.wordCount = pure; document.getElementById('currentWords').textContent = pure;
+            const added = pure - sessionStartWords; document.getElementById('sessionWords').textContent = added > 0 ? added : 0;
+            if (added > 0 && !firstKeystrokeTime) firstKeystrokeTime = Date.now();
+            if (firstKeystrokeTime && (Date.now()-firstKeystrokeTime)/60000 > 0.5) document.getElementById('writingSpeed').textContent = Math.floor((added / ((Date.now()-firstKeystrokeTime)/60000)) * 60);
+            saveData(); triggerLocalWrite(editor.value); updateChapterTree();
+        });
+        function updateChapterTree() {
+            const text = editor.value; const matches = [...text.matchAll(/(第[一二三四五六七八九十百千0-9]+[集场])/g)]; const list = document.getElementById('chapterList'); list.innerHTML = '';
+            if(matches.length === 0) return list.innerHTML = '<div style="color:var(--text-muted); font-size:12px; padding: 8px;">无集数节点。</div>';
+            matches.forEach((m, i) => {
+                const end = i+1 < matches.length ? matches[i+1].index : text.length; const el = document.createElement('div'); el.className = 'chapter-item';
+                el.innerHTML = `<span class="chapter-title">${m[0]}</span><span class="chapter-words">${text.slice(m.index, end).replace(/[\s\n\r]/g,'').length}字</span>`;
+                el.onclick = () => { editor.focus(); editor.setSelectionRange(m.index, m.index); }; list.appendChild(el);
+            });
+        }
+        function switchRightPanel(type) { document.querySelectorAll('.panel-tab').forEach(e=>e.classList.remove('active')); document.getElementById(`tab-${type}-btn`).classList.add('active'); document.querySelectorAll('.panel-content').forEach(e=>e.style.display='none'); document.getElementById(`panel-${type}`).style.display='block'; }
+        function renderReferencePanel() {
+            const container = document.getElementById('referenceContainer'); container.innerHTML = ''; const toShow = [...db.inspiration.male, ...db.inspiration.female, ...db.inspiration.plot].slice(0, 8); 
+            if(toShow.length === 0) return container.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">灵感库为空。</div>';
+            toShow.forEach(item => { const el = document.createElement('div'); el.className = 'ref-card'; let catName = '参考'; for(let cat in db.inspiration) { if(db.inspiration[cat].some(x => x.id === item.id)) catName = categoryNames[cat]; } el.innerHTML = `<span class="ref-badge">${catName}</span><div style="font-size:13px; margin-top:4px;">${item.content}</div>`; container.appendChild(el); });
+        }
+
+        // ================= 场次看板 (拖拽) =================
+        let scenesData = [];
+        function openSceneBoard() {
+            const text = document.getElementById('editor').value; const matches = [...text.matchAll(/(第[一二三四五六七八九十百千0-9]+[集场])/g)]; scenesData = [];
+            if (matches.length === 0) return showToast('无章节节点，请在正文打出如【第一集】');
+            if (matches[0].index > 0) scenesData.push({ id: 'pro', title: '前置设定', content: text.substring(0, matches[0].index) });
+            for (let i = 0; i < matches.length; i++) { const endIdx = i + 1 < matches.length ? matches[i+1].index : text.length; scenesData.push({ id: 's_'+i, title: matches[i][0], content: text.slice(matches[i].index, endIdx) }); }
+            const container = document.getElementById('sceneGrid'); container.innerHTML = '';
+            scenesData.forEach((s, i) => {
+                const el = document.createElement('div'); el.className = 'scene-card'; el.draggable = true; el.dataset.index = i;
+                el.innerHTML = `<div class="scene-drag-handle">⠿</div><div class="scene-title" style="font-weight:bold; font-size:14px;">${s.title}</div><div class="scene-preview" style="font-size:12px; color:var(--text-muted);">${s.content.substring(0,40).replace(/\n/g,' ')}...</div>`;
+                el.ondragstart = e => { e.dataTransfer.effectAllowed='move'; window.dragIdx = i; }; el.ondragover = e => e.preventDefault();
+                el.ondrop = e => { e.preventDefault(); const dropIdx = i; if(window.dragIdx === dropIdx) return; const item = scenesData.splice(window.dragIdx, 1)[0]; scenesData.splice(dropIdx, 0, item); openSceneBoard(); }; container.appendChild(el);
+            });
+            document.getElementById('sceneBoardModal').classList.add('show');
+        }
+        function closeSceneBoard() { document.getElementById('sceneBoardModal').classList.remove('show'); }
+        function applySceneOrder() { saveManualSnapshot(); document.getElementById('editor').value = scenesData.map(s => s.content).join(''); document.getElementById('editor').dispatchEvent(new Event('input')); closeSceneBoard(); showToast('顺序已应用'); }
+
+        // ================= 剧本库管理 & 时光机 & 导出 =================
+        function renderProjects() { const g = document.getElementById('projectGrid'); g.innerHTML=''; [...db.projects].sort((a,b)=>b.lastEdited-a.lastEdited).forEach(p=>{ const isA = p.id===db.activeProjectId; const d=new Date(p.lastEdited); const el = document.createElement('div'); el.className=`card project-card ${isA?'active-proj':''}`; el.innerHTML=`<div><div class="proj-title">${p.title}</div><div class="proj-meta"><span>${p.wordCount||0} 字</span><span>更: ${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes()}</span></div></div><div class="proj-actions"><button class="btn ${isA?'btn-primary':'btn-outline'}" onclick="openProject('${p.id}')">${isA?'继续写作':'进入'}</button><button class="btn btn-danger" style="border:none;" onclick="deleteProject('${p.id}')">删除</button></div>`; g.appendChild(el); }); }
+        function createNewProject() { const t = prompt("新名称：", "新剧本"); if(t){ const id=Date.now().toString(); db.projects.push({id, title:t, content:'', wordCount:0, characters:[], lastEdited:Date.now(), snapshots:[]}); saveData(); openProject(id); showToast('创建成功'); } }
+        function openProject(id) { db.activeProjectId = id; saveData(); loadActiveProjectToEditor(); switchTab('editor'); currentFileHandle=null; document.getElementById('localSyncBtn').innerText='🔗 硬盘直连'; document.getElementById('localSyncBtn').classList.remove('btn-primary'); document.getElementById('localSyncBtn').classList.add('btn-outline');}
+        function deleteProject(id) { if (db.projects.length <= 1) return showToast('留一个吧！'); if(confirm('确认删除？')){ db.projects = db.projects.filter(p=>p.id!==id); if(db.activeProjectId===id) db.activeProjectId=db.projects[0].id; saveData(); renderProjects(); loadActiveProjectToEditor(); } }
+        
+        function saveSnapshot(type = 'auto') { const p = db.projects.find(x=>x.id===db.activeProjectId); if(!p) return; p.snapshots.unshift({id:Date.now(), time:Date.now(), type, content:editor.value, words:editor.value.replace(/[\s\n\r]/g, '').length}); const a=p.snapshots.filter(s=>s.type==='auto'); if(a.length>15) p.snapshots=p.snapshots.filter(s=>s.id!==a[a.length-1].id); saveData(); }
+        function saveManualSnapshot() { saveSnapshot('manual'); showToast('手动存至时光机'); }
+        function autoSnapshot() { const p = db.projects.find(x=>x.id===db.activeProjectId); if(p && p.snapshots.length>0 && p.snapshots[0].content===editor.value) return; saveSnapshot('auto'); }
+        function openHistoryModal() {
+            const list = document.getElementById('historyList'); const p = db.projects.find(x=>x.id===db.activeProjectId); list.innerHTML='';
+            if(!p || p.snapshots.length===0) return list.innerHTML='<div style="padding:40px; text-align:center; color:var(--text-muted);">暂无快照</div>';
+            p.snapshots.forEach(s => { const d=new Date(s.time); list.innerHTML+=`<div class="history-item" style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid var(--border-light);"><div class="history-info"><div class="history-time" style="font-weight:600;">${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}</div><div class="history-meta" style="font-size:12px; color:var(--text-muted);">${s.type==='manual'?'<span style="color:var(--btn-primary-bg)">[手动]</span>':'[自动]'} <span>${s.words}字</span></div></div><button class="btn btn-outline" onclick="restoreSnapshot(${s.id})">找回</button></div>`; });
+            document.getElementById('historyModal').classList.add('show');
+        }
+        function closeHistoryModal() { document.getElementById('historyModal').classList.remove('show'); }
+        function restoreSnapshot(id) { if(confirm('覆盖当前编辑栏？')) { const p=db.projects.find(x=>x.id===db.activeProjectId); const s=p.snapshots.find(x=>x.id===id); if(s){ saveSnapshot('auto'); editor.value=s.content; editor.dispatchEvent(new Event('input')); closeHistoryModal(); showToast('成功回退！'); } } }
+        
+        function exportDocument(format) { 
+            const p = db.projects.find(x=>x.id===db.activeProjectId); 
+            if(!editor.value) return showToast('内容为空'); 
+            
+            const a = document.createElement('a');
+            if (format === 'txt') {
+                a.href = URL.createObjectURL(new Blob([editor.value], {type: "text/plain;charset=utf-8"})); 
+                a.download = `${p.title}.txt`; 
+            } else if (format === 'doc') {
+                const preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>导出</title><style>body { font-family: 'SimSun', serif; font-size: 14pt; line-height: 1.5; }</style></head><body>";
+                const postHtml = "</body></html>";
+                const html = preHtml + editor.value.replace(/\n/g, '<br>') + postHtml;
+                a.href = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(html);
+                a.download = `${p.title}.doc`;
+            }
+            a.click(); 
+        }
+
+        // ================= 扭蛋机与灵感 =================
+        function getRandomItem(arr) { return arr && arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)].content : '[素材缺失]'; }
+        let lastGeneratedOutline = "";
+        function generateOutline() {
+            const i = db.inspiration; const male = getRandomItem(i.male); const female = getRandomItem(i.female); const plot = getRandomItem(i.plot); const idea = getRandomItem(i.idea); const dial = getRandomItem(i.dialogue); const trend = getRandomItem(i.trend);
+            lastGeneratedOutline = `【男主人设】\n${male}\n\n【女主人设】\n${female}\n\n【核心剧情】\n${plot}\n\n【脑洞反转】\n${idea}\n\n【高光台词】\n“${dial}”\n\n【网感热点】\n${trend}`;
+            document.getElementById('generatedOutline').innerHTML = `<div class="gen-section"><div class="gen-label">👨 男主人设</div><div class="gen-text">${male}</div></div><div class="gen-section"><div class="gen-label">👩 女主人设</div><div class="gen-text">${female}</div></div><div class="gen-section"><div class="gen-label">📖 核心剧情梗</div><div class="gen-text" style="font-weight:600;">${plot}</div></div><div class="gen-section"><div class="gen-label">💭 脑洞与反转</div><div class="gen-text">${idea}</div></div><div class="gen-section"><div class="gen-label">💬 预定爆款台词</div><div class="gen-text" style="font-style:italic;">“${dial}”</div></div><div class="gen-section"><div class="gen-label">🔥 叠加热点</div><div class="gen-text">${trend}</div></div>`; showToast('扭蛋成功！');
+        }
+        function exportOutline() { if(!lastGeneratedOutline) return; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([lastGeneratedOutline])); a.download=`扭蛋大纲.txt`; a.click(); }
+
+        let currentInspFilter = 'all';
+        function toggleBulkArea() { const area = document.getElementById('bulkInputArea'); area.style.display = area.style.display === 'none' || area.style.display === '' ? 'block' : 'none'; }
+        function filterInsp(cat) { currentInspFilter = cat; document.querySelectorAll('.filter-tag').forEach(el => el.classList.remove('active')); event.currentTarget.classList.add('active'); renderInspirations(); }
+        function processBulkImport() {
+            const text = document.getElementById('bulkContent').value; const cat = document.getElementById('bulkCategory').value; if(!text.trim()) return showToast('空');
+            let count = 0; text.split('\n').forEach(line => { const clean = line.replace(/^[\-\*\•\d\.]+\s*/, '').trim(); if(clean) { db.inspiration[cat].push({ id: Date.now() + Math.random().toString(36).substring(2,8), content: clean }); count++; } });
+            if(count > 0){ saveData(); renderInspirations(); document.getElementById('bulkContent').value = ''; toggleBulkArea(); showToast(`录入 ${count} 条`); }
+        }
+        function deleteInsp(cat, id) { db.inspiration[cat] = db.inspiration[cat].filter(x => x.id !== id); saveData(); renderInspirations(); }
+        function renderInspirations() {
+            const board = document.getElementById('masonryBoard'); board.innerHTML = ''; let items = [];
+            if(currentInspFilter === 'all') { for(let cat in db.inspiration) { db.inspiration[cat].forEach(x => items.push({...x, _cat: cat})); } items.sort((a,b) => b.id.localeCompare(a.id)); } else { items = db.inspiration[currentInspFilter].map(x => ({...x, _cat: currentInspFilter})).reverse(); }
+            if(items.length === 0) return board.innerHTML = '<div style="column-span: all; text-align:center; padding:40px; color:var(--text-muted); font-size: 14px;">暂无数据</div>';
+            items.forEach(item => { const el = document.createElement('div'); el.className = 'card masonry-card'; el.innerHTML = `<div class="insp-content" style="font-size:14px;">${item.content}</div><div class="insp-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; border-top:1px solid var(--border-light); padding-top:12px;"><span class="insp-badge" style="font-size:11px; background:var(--bg-body); padding:4px 8px; border-radius:4px;">${categoryNames[item._cat]}</span><button class="btn btn-outline" style="padding:2px 8px; font-size:11px;" onclick="deleteInsp('${item._cat}', '${item.id}')">删除</button></div>`; board.appendChild(el); });
+        }
+
+        // ================= iOS 计划悬浮球 =================
+        let panelOpen=false; function toggleIosPanel(){ panelOpen=!panelOpen; document.getElementById('iosPanel').classList.toggle('show', panelOpen); }
+        function addPlan(){ const t=document.getElementById('planTitle').value; const d=document.getElementById('planDeadline').value; if(t){ db.plans.push({id:Date.now(), title:t, deadline:d, completed:false}); saveData(); renderPlans(); document.getElementById('planTitle').value=''; showToast('已添加'); } }
+        function renderPlans(){ const c=document.getElementById('planListContainer'); c.innerHTML=''; if(db.plans.length===0) return c.innerHTML='<div style="color:var(--text-muted); padding:20px 0;">无安排</div>'; db.plans.forEach(p=>{ const el=document.createElement('div'); el.className=`plan-item ${p.completed?'completed':''}`; el.innerHTML=`<div class="plan-title" style="font-weight:600; margin-bottom:8px;">${p.title}</div><div class="plan-meta" style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted);"><span>截止: ${p.deadline||'无'}</span><div><button class="btn btn-outline" style="padding:4px 10px; font-size:12px;" onclick="toggleTask(${p.id})">${p.completed?'撤销':'完成'}</button><button class="btn btn-danger" style="padding:4px 10px; font-size:12px; margin-left:8px;" onclick="delTask(${p.id})">删</button></div></div>`; c.appendChild(el); }); updateIosWidget(); }
+        function toggleTask(id){ const p=db.plans.find(x=>x.id===id); if(p){ p.completed=!p.completed; saveData(); renderPlans(); } }
+        function delTask(id){ db.plans=db.plans.filter(x=>x.id!==id); saveData(); renderPlans(); }
+        function updateIosWidget(){ const b=document.getElementById('iosBadge'); const p=db.plans.filter(x=>!x.completed).length; b.style.display=p>0?'flex':'none'; b.innerText=p; const c=document.getElementById('iosPanelContent'); c.innerHTML=''; if(db.plans.length===0) return c.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">无任务</div>'; db.plans.forEach(x=>{ const row=document.createElement('div'); row.className='ios-task-row'; row.onclick=()=>toggleTask(x.id); row.innerHTML=`<div class="ios-checkbox ${x.completed?'checked':''}"></div><div style="flex:1;"><div class="ios-task-text ${x.completed?'completed':''}">${x.title}</div></div>`; c.appendChild(row); }); }
+
+        window.onload = () => { initDB(); };
+    </script>
+</body>
+</html>
